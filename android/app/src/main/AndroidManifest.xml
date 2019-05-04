@@ -2,10 +2,12 @@
     package="com.example.vehicletrack">
 
     <!-- The INTERNET permission is required for development. Specifically,
-         flutter needs it to communicate with the running application
+         flutter needs it to communica  te with the running application
          to allow setting breakpoints, to provide hot reload, etc.
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
 
     <!-- io.flutter.app.FlutterApplication is an android.app.Application that
          calls FlutterMain.startInitialization(this); in its onCreate method.

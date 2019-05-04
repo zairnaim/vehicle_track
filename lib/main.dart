@@ -2,7 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:sensors/sensors.dart';
-// import 'package:geolocator/geolocator.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 void main() => runApp(MyApp());
 
@@ -29,8 +30,6 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
   List<StreamSubscription<dynamic>> _streamSubscriptions =
       <StreamSubscription<dynamic>>[];
 
@@ -40,14 +39,14 @@ class _MyHomePageState extends State<MyHomePage> {
   List<double> _gyroscopeValues;
 
   //location data
-  // var geolocator = Geolocator();
-  // var locationOptions =
-  //     LocationOptions(accuracy: LocationAccuracy.high, distanceFilter: 10);
-  // List<double> _locationValues;
+  var geolocator = Geolocator();
+  var locationOptions =
+      LocationOptions(accuracy: LocationAccuracy.high, distanceFilter: 1);
+  List<double> _locationValues;
 
   void _incrementCounter() {
     setState(() {
-      _counter++;
+      // _counter++;
     });
   }
 
@@ -56,13 +55,12 @@ class _MyHomePageState extends State<MyHomePage> {
     final List<String> accelerometer =
         _accelerometerValues?.map((double v) => v.toStringAsFixed(3))?.toList();
     final List<String> gyroscope =
-        _gyroscopeValues?.map((double v) => v.toStringAsFixed(3))?.toList();
+        _gyroscopeValues?.map((double v) => v.toStringAsFixed(2))?.toList();
     final List<String> userAccelerometer = _userAccelerometerValues
         ?.map((double v) => v.toStringAsFixed(3))
         ?.toList();
-    // final List<String> location = _locationValues
-    //     ?.map((double v) => v.toStringAsFixed(3))
-    //     ?.toList();
+    final List<String> location =
+        _locationValues?.map((double v) => v.toStringAsFixed(8))?.toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -125,23 +123,27 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
             padding: const EdgeInsets.all(16.0),
           ),
-          // Padding(
-          //   child: Card(
-          //     child: Padding(
-          //       padding: const EdgeInsets.all(8.0),
-          //       child: Row(
-          //         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          //         children: <Widget>[
-          //           Text(
-          //             'location',
-          //             style: TextStyle(fontWeight: FontWeight.bold),
-          //           ),
-          //           Text('$location'),
-          //         ],
-          //       ),
-          //     ),
-          //   ),
-          //   padding: const EdgeInsets.all(16.0),
+          Padding(
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: <Widget>[
+                    Text(
+                      'location',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    Text('$location'),
+                  ],
+                ),
+              ),
+            ),
+            padding: const EdgeInsets.all(16.0),
+          ),
+          // RaisedButton(
+          //   child: Text('Get Location Permission'),
+          //   onPressed: _askPermission,
           // ),
         ],
       ),
@@ -151,6 +153,12 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void initState() {
     super.initState();
+
+    // PermissionHandler()
+    //     .checkPermissionStatus(PermissionGroup.location)
+    //     .then(_updatePermission);
+    //
+
     _streamSubscriptions
         .add(accelerometerEvents.listen((AccelerometerEvent event) {
       setState(() {
@@ -168,13 +176,14 @@ class _MyHomePageState extends State<MyHomePage> {
         _userAccelerometerValues = <double>[event.x, event.y, event.z];
       });
     }));
-    // _streamSubscriptions.add(geolocator
-    //     .getPositionStream(locationOptions)
-    //     .listen((Position position) {
-    //   setState(() {
-    //     _locationValues = <double>[position.latitude, position.longitude];
-    //   });
-    // }));
+    _streamSubscriptions.add(geolocator
+        .getPositionStream(locationOptions)
+        .listen((Position position) {
+      setState(() {
+        _locationValues = <double>[position.latitude, position.longitude];
+        print("heelloo" + _locationValues[0].toString());
+      });
+    }));
 
     // StreamSubscription<Position> positionStream = geolocator
     //     .getPositionStream(locationOptions)
@@ -186,4 +195,16 @@ class _MyHomePageState extends State<MyHomePage> {
     //           _position.longitude.toString());
     // });
   }
+
+  // void _updatePermission(PermissionStatus value) {
+  //   print(value.toString());
+  // }
+
+  // void _askPermission() {
+  //   PermissionHandler().requestPermissions([PermissionGroup.location]);
+
+  //   PermissionHandler()
+  //       .checkPermissionStatus(PermissionGroup.location)
+  //       .then(_updatePermission);
+  // }
 }

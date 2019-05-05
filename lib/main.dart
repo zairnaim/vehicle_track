@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:sensors/sensors.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:http/http.dart' as http;
 
 void main() => runApp(MyApp());
 
@@ -44,10 +46,10 @@ class _MyHomePageState extends State<MyHomePage> {
       LocationOptions(accuracy: LocationAccuracy.high, distanceFilter: 1);
   List<double> _locationValues;
 
-  void _incrementCounter() {
-    setState(() {
-      // _counter++;
-    });
+  //POST
+  static final CREATE_POST_URL = 'http://192.168.1.248/data';
+  String getTime() {
+    return DateTime.now().toUtc().toString();
   }
 
   @override
@@ -141,10 +143,25 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
             padding: const EdgeInsets.all(16.0),
           ),
-          // RaisedButton(
-          //   child: Text('Get Location Permission'),
-          //   onPressed: _askPermission,
-          // ),
+          RaisedButton(
+            child: Text('Post Stuff'),
+            onPressed: () async {
+              Post newPost = new Post(
+                  userId: 123,
+                  sensorType: 'accelerometer',
+                  timeStamp: getTime(),
+                  x: .123,
+                  y: .123,
+                  z: .123);
+              // Map<String, String> stringstringmap = {"user_id": "1"};
+              // String jsonBody = json.encode(stringstringmap);
+              // Post p = await createSensorPost(CREATE_POST_URL,
+              //     body: jsonBody);
+
+              String jsonBody = json.encode(newPost.toMap());
+              Post p = await createSensorPost(CREATE_POST_URL, body: jsonBody);
+            },
+          ),
         ],
       ),
     );
@@ -163,6 +180,15 @@ class _MyHomePageState extends State<MyHomePage> {
         .add(accelerometerEvents.listen((AccelerometerEvent event) {
       setState(() {
         _accelerometerValues = <double>[event.x, event.y, event.z];
+        // Post newPost = new Post(
+        //     userId: "123",
+        //     sensorType: 'accelerometer',
+        //     timeStamp: new DateTime.now(),
+        //     x: event.x,
+        //     y: event.y,
+        //     z: event.z);
+        // Post p = await createSensorPost(CREATE_POST_URL, body: newPost.toMap());
+        // print(p.x);
       });
     }));
     _streamSubscriptions.add(gyroscopeEvents.listen((GyroscopeEvent event) {
@@ -207,4 +233,134 @@ class _MyHomePageState extends State<MyHomePage> {
   //       .checkPermissionStatus(PermissionGroup.location)
   //       .then(_updatePermission);
   // }
+}
+
+//////// Sensor Post
+
+class Post {
+  final int userId;
+  final String sensorType;
+  final String timeStamp;
+  final double x;
+  final double y;
+  final double z;
+
+  Post({this.userId, this.sensorType, this.timeStamp, this.x, this.y, this.z});
+
+  factory Post.fromJson(Map<String, dynamic> json) {
+    return Post(
+      userId: json['user_id'],
+      sensorType: "accelerometer",
+      timeStamp: json['accelerometer']['timestamp'],
+      x: json['accelerometer']['x'],
+      y: json['accelerometer']['y'],
+      z: json['accelerometer']['z'],
+    );
+  }
+
+  factory Post.fromblankJson(Map<String, dynamic> json) {
+    return Post(
+      userId: 1,
+      sensorType: "accelerometer",
+      timeStamp: '23-32-41',
+      x: 0.001,
+      y: 0.002,
+      z: 0.003,
+    );
+  }
+
+  Map toMap() {
+    var map = new Map<String, dynamic>();
+    map["user_id"] = userId;
+
+    var databody = {};
+    databody["timestamp"] = timeStamp;
+    databody["x"] = x;
+    databody["y"] = y;
+    databody["z"] = z;
+
+    map["accelerometer"] = [databody];
+    return map;
+  }
+}
+
+Future<Post> createSensorPost(String url, {String body}) async {
+  print("this is dumb");
+  final header = {'Content-Type': 'application/json'};
+  return http
+      .post(url, headers: header, body: body)
+      .then((http.Response response) {
+    final int statusCode = response.statusCode;
+
+    if (statusCode < 200 || statusCode > 400 || json == null) {
+      throw new Exception("Error while fetching data");
+    }
+    return Post.fromblankJson(json.decode(response.body));
+  });
+}
+
+//////// Position Post stuff
+
+class PositionPost {
+  final String userid;
+  final String longitude;
+  final String latitude;
+  final String timestamp;
+  final String accuracy;
+  final String altitude;
+  final String heading;
+  final String speed;
+  final String speedaccuracy;
+
+  PositionPost(
+      {this.userid,
+      this.longitude,
+      this.latitude,
+      this.timestamp,
+      this.accuracy,
+      this.altitude,
+      this.heading,
+      this.speed,
+      this.speedaccuracy});
+
+  factory PositionPost.fromJson(Map<String, dynamic> json) {
+    return PositionPost(
+        longitude: json["longitude"],
+        latitude: json["latitude"],
+        timestamp: json["timestamp"],
+        accuracy: json["accuracy"],
+        altitude: json["altitude"],
+        heading: json["heading"],
+        speed: json["speed"],
+        speedaccuracy: json["speedaccuracy"]);
+  }
+
+  Map toMap() {
+    var map = new Map<String, dynamic>();
+    map["user_id"] = userid;
+
+    var databody = {};
+    databody["user_id"] = userid;
+    databody["longitude"] = longitude;
+    databody["latitude"] = latitude;
+    databody["timestamp"] = timestamp;
+    databody["accuracy"] = accuracy;
+    databody["altitude"] = altitude;
+    databody["speed"] = speed;
+    databody["speedacuracy"] = speedaccuracy;
+
+    map["position"] = databody;
+    return map;
+  }
+}
+
+Future<Post> createPositionPost(String url, {Map body}) async {
+  return http.post(url, body: body).then((http.Response response) {
+    final int statusCode = response.statusCode;
+
+    if (statusCode < 200 || statusCode > 400 || json == null) {
+      throw new Exception("Error while fetching data");
+    }
+    return Post.fromJson(json.decode(response.body));
+  });
 }

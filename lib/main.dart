@@ -47,7 +47,7 @@ class _MyHomePageState extends State<MyHomePage> {
   List<double> _locationValues;
 
   //POST
-  static final CREATE_POST_URL = 'http://192.168.1.248/data';
+  static final CREATE_POST_URL = 'http://api.allegoryinsurance.com/data';
   String getTime() {
     return DateTime.now().toUtc().toString();
   }
@@ -133,7 +133,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: <Widget>[
                     Text(
-                      'location',
+                      'Location',
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
                     Text('$location'),
@@ -175,7 +175,7 @@ class _MyHomePageState extends State<MyHomePage> {
         .add(accelerometerEvents.listen((AccelerometerEvent event) {
       setState(() {
         _accelerometerValues = <double>[event.x, event.y, event.z];
-              // Post newPost = new Post(
+        // Post newPost = new Post(
         //     userId: "123",
         //     sensorType: 'accelerometer',
         //     timeStamp: new DateTime.now(),
@@ -203,6 +203,18 @@ class _MyHomePageState extends State<MyHomePage> {
       setState(() {
         _locationValues = <double>[position.latitude, position.longitude];
         print("heelloo" + _locationValues[0].toString());
+        PositionPost pp = PositionPost(
+          userid: 123,
+          accuracy: position.accuracy,
+          altitude: position.altitude,
+          timestamp: position.timestamp.toUtc().toString(),
+          longitude: position.longitude,
+          latitude: position.latitude,
+          heading: position.heading,
+          speed: position.speed,
+          speedaccuracy: position.speedAccuracy,
+        );
+        
       });
     }));
 
@@ -230,9 +242,10 @@ class _MyHomePageState extends State<MyHomePage> {
   // }
 }
 
+
 //////// Sensor Post
 
-class SensorType{
+class SensorType {
   static String accel = "accelerometer";
   static String useraccel = "useraccelerometer";
   static String gyro = "gyroscope";
@@ -304,15 +317,15 @@ Future<Post> createSensorPost(String url, {String body}) async {
 //////// Position Post stuff
 
 class PositionPost {
-  final String userid;
-  final String longitude;
-  final String latitude;
+  final int userid;
+  final double longitude;
+  final double latitude;
   final String timestamp;
-  final String accuracy;
-  final String altitude;
-  final String heading;
-  final String speed;
-  final String speedaccuracy;
+  final double accuracy;
+  final double altitude;
+  final double heading;
+  final double speed;
+  final double speedaccuracy;
 
   PositionPost(
       {this.userid,
@@ -351,18 +364,22 @@ class PositionPost {
     databody["speed"] = speed;
     databody["speedacuracy"] = speedaccuracy;
 
-    map["position"] = databody;
+    map["position"] = [databody];
     return map;
   }
 }
 
-Future<Post> createPositionPost(String url, {Map body}) async {
-  return http.post(url, body: body).then((http.Response response) {
+Future<PositionPost> createPositionPost(String url, {String body}) async {
+  print("this is dumb");
+  final header = {'Content-Type': 'application/json'};
+  return http
+      .post(url, headers: header, body: body)
+      .then((http.Response response) {
     final int statusCode = response.statusCode;
 
     if (statusCode < 200 || statusCode > 400 || json == null) {
       throw new Exception("Error while fetching data");
     }
-    return Post.fromJson(json.decode(response.body));
+    return PositionPost.fromJson(json.decode(response.body));
   });
 }

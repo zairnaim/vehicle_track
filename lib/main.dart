@@ -148,16 +148,11 @@ class _MyHomePageState extends State<MyHomePage> {
             onPressed: () async {
               Post newPost = new Post(
                   userId: 123,
-                  sensorType: 'accelerometer',
+                  sensorType: SensorType.gyro,
                   timeStamp: getTime(),
                   x: .123,
                   y: .123,
                   z: .123);
-              // Map<String, String> stringstringmap = {"user_id": "1"};
-              // String jsonBody = json.encode(stringstringmap);
-              // Post p = await createSensorPost(CREATE_POST_URL,
-              //     body: jsonBody);
-
               String jsonBody = json.encode(newPost.toMap());
               Post p = await createSensorPost(CREATE_POST_URL, body: jsonBody);
             },
@@ -180,7 +175,7 @@ class _MyHomePageState extends State<MyHomePage> {
         .add(accelerometerEvents.listen((AccelerometerEvent event) {
       setState(() {
         _accelerometerValues = <double>[event.x, event.y, event.z];
-        // Post newPost = new Post(
+              // Post newPost = new Post(
         //     userId: "123",
         //     sensorType: 'accelerometer',
         //     timeStamp: new DateTime.now(),
@@ -237,6 +232,13 @@ class _MyHomePageState extends State<MyHomePage> {
 
 //////// Sensor Post
 
+class SensorType{
+  static String accel = "accelerometer";
+  static String useraccel = "useraccelerometer";
+  static String gyro = "gyroscope";
+  static String unknown = "unknown";
+}
+
 class Post {
   final int userId;
   final String sensorType;
@@ -250,7 +252,7 @@ class Post {
   factory Post.fromJson(Map<String, dynamic> json) {
     return Post(
       userId: json['user_id'],
-      sensorType: "accelerometer",
+      sensorType: SensorType.unknown,
       timeStamp: json['accelerometer']['timestamp'],
       x: json['accelerometer']['x'],
       y: json['accelerometer']['y'],
@@ -261,7 +263,7 @@ class Post {
   factory Post.fromblankJson(Map<String, dynamic> json) {
     return Post(
       userId: 1,
-      sensorType: "accelerometer",
+      sensorType: SensorType.unknown,
       timeStamp: '23-32-41',
       x: 0.001,
       y: 0.002,
@@ -279,7 +281,7 @@ class Post {
     databody["y"] = y;
     databody["z"] = z;
 
-    map["accelerometer"] = [databody];
+    map[sensorType.toString()] = [databody];
     return map;
   }
 }

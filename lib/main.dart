@@ -6,6 +6,8 @@ import 'package:sensors/sensors.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter_background_geolocation/flutter_background_geolocation.dart'
+    as bg;
 
 void main() => runApp(MyApp());
 
@@ -17,7 +19,8 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blueGrey,
       ),
-      home: MyHomePage(title: 'Flutter Demo Home Page'),
+      //home: MyHomePage(title: 'Flutter Demo Home Page'),
+      home: BackgroundGeo(),
     );
   }
 }
@@ -214,7 +217,6 @@ class _MyHomePageState extends State<MyHomePage> {
           speed: position.speed,
           speedaccuracy: position.speedAccuracy,
         );
-        
       });
     }));
 
@@ -241,7 +243,6 @@ class _MyHomePageState extends State<MyHomePage> {
   //       .then(_updatePermission);
   // }
 }
-
 
 //////// Sensor Post
 
@@ -382,4 +383,89 @@ Future<PositionPost> createPositionPost(String url, {String body}) async {
     }
     return PositionPost.fromJson(json.decode(response.body));
   });
+}
+
+///// Flutter Background Geolocation Plugin Stuff
+
+class BackgroundGeo extends StatefulWidget {
+  @override
+  _BackgroundGeoState createState() => _BackgroundGeoState();
+}
+
+class _BackgroundGeoState extends State<BackgroundGeo> {
+  @override
+  void initState() {
+    super.initState();
+    ////
+    // 1.  Listen to events (See docs for all 12 available events).
+    //
+
+    // Fired whenever a location is recorded
+    bg.BackgroundGeolocation.onLocation((bg.Location location) {
+      print('[location] - $location');
+    });
+
+    // Fired whenever the plugin changes motion-state (stationary->moving and vice-versa)
+    bg.BackgroundGeolocation.onMotionChange((bg.Location location) {
+      print('[motionchange] - $location');
+    });
+
+    // Fired whenever the state of location-services changes.  Always fired at boot
+    bg.BackgroundGeolocation.onProviderChange((bg.ProviderChangeEvent event) {
+      print('[providerchange] - $event');
+    });
+
+    ////
+    // 2.  Configure the plugin
+    //
+    bg.BackgroundGeolocation.ready(bg.Config(
+            desiredAccuracy: bg.Config.DESIRED_ACCURACY_HIGH,
+            distanceFilter: 1.0,
+            stopOnTerminate: false,
+            startOnBoot: true,
+            debug: true,
+            logLevel: bg.Config.LOG_LEVEL_VERBOSE,
+            reset: true))
+        .then((bg.State state) {
+      if (!state.enabled) {
+        ////
+        // 3.  Start the plugin.
+        //
+        bg.BackgroundGeolocation.start();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // TODO: implement build
+    return Scaffold(
+      body: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        mainAxisSize: MainAxisSize.max,
+        children: <Widget>[
+          Text("hi"),
+          RaisedButton(
+            child: Text("get the data"),
+            onPressed: _onClickGetCurrentPosition,
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _onClickGetCurrentPosition() {
+    bg.BackgroundGeolocation.getCurrentPosition(
+            persist: false, // <-- do not persist this location
+            desiredAccuracy: 0, // <-- desire best possible accuracy
+            timeout: 30000, // <-- wait 30s before giving up.
+            samples: 3 // <-- sample 3 location before selecting best.
+            )
+        .then((bg.Location location) {
+      print('[getCurrentPosition] - $location');
+    }).catchError((error) {
+      print('[getCurrentPosition] ERROR: $error');
+    });
+  }
 }

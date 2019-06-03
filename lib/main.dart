@@ -9,6 +9,8 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_background_geolocation/flutter_background_geolocation.dart'
     as bg;
 
+final CREATE_POST_URL = 'http://api.allegoryinsurance.com/data';
+
 void main() => runApp(MyApp());
 
 class MyApp extends StatelessWidget {
@@ -356,14 +358,14 @@ class PositionPost {
     map["user_id"] = userid;
 
     var databody = {};
-    databody["user_id"] = userid;
-    databody["longitude"] = longitude;
-    databody["latitude"] = latitude;
     databody["timestamp"] = timestamp;
+    databody["latitude"] = latitude;
+    databody["longitude"] = longitude;
     databody["accuracy"] = accuracy;
     databody["altitude"] = altitude;
+    databody["heading"] = 0;
     databody["speed"] = speed;
-    databody["speedacuracy"] = speedaccuracy;
+    databody["speed_accuracy"] = 0;
 
     map["position"] = [databody];
     return map;
@@ -395,20 +397,17 @@ class BackgroundGeo extends StatefulWidget {
 class _BackgroundGeoState extends State<BackgroundGeo> {
   @override
   void initState() {
+    //https://gist.github.com/christocracy/a0464846de8a9c27c7e9de5616082878
     super.initState();
     ////
     // 1.  Listen to events (See docs for all 12 available events).
     //
 
     // Fired whenever a location is recorded
-    bg.BackgroundGeolocation.onLocation((bg.Location location) {
-      print('[location] - $location');
-    });
+    bg.BackgroundGeolocation.onLocation(_onLocation);
 
     // Fired whenever the plugin changes motion-state (stationary->moving and vice-versa)
-    bg.BackgroundGeolocation.onMotionChange((bg.Location location) {
-      print('[motionchange] - $location');
-    });
+    bg.BackgroundGeolocation.onMotionChange(_onLocation);
 
     // Fired whenever the state of location-services changes.  Always fired at boot
     bg.BackgroundGeolocation.onProviderChange((bg.ProviderChangeEvent event) {
@@ -436,6 +435,34 @@ class _BackgroundGeoState extends State<BackgroundGeo> {
     });
   }
 
+  String str = "";
+  void _onLocation(bg.Location location) async {
+    print('[location] - $location');
+
+    String odometerKM = (location.odometer / 1000.0).toStringAsFixed(1);
+
+    setState(() {
+      str = location.timestamp;
+    });
+
+    //   _locationValues = <double>[position.latitude, position.longitude];
+    //print("heelloo" + _locationValues[0].toString());
+    PositionPost pp = PositionPost(
+      userid: 123,
+      accuracy: location.coords.accuracy,
+      altitude: location.coords.altitude,
+      timestamp: location.timestamp.toString(),
+      longitude: location.coords.longitude,
+      latitude: location.coords.latitude,
+      heading: location.coords.heading,
+      speed: location.coords.speed,
+      speedaccuracy: 0,
+    );
+
+    String jsonBody = json.encode(pp.toMap());
+    PositionPost p = await createPositionPost(CREATE_POST_URL, body: jsonBody);
+  }
+
   @override
   Widget build(BuildContext context) {
     // TODO: implement build
@@ -445,7 +472,7 @@ class _BackgroundGeoState extends State<BackgroundGeo> {
         crossAxisAlignment: CrossAxisAlignment.center,
         mainAxisSize: MainAxisSize.max,
         children: <Widget>[
-          Text("hi"),
+          Text(str),
           RaisedButton(
             child: Text("get the data"),
             onPressed: _onClickGetCurrentPosition,
@@ -460,7 +487,7 @@ class _BackgroundGeoState extends State<BackgroundGeo> {
             persist: false, // <-- do not persist this location
             desiredAccuracy: 0, // <-- desire best possible accuracy
             timeout: 30000, // <-- wait 30s before giving up.
-            samples: 3 // <-- sample 3 location before selecting best.
+            samples: 1 // <-- sample 3 location before selecting best.
             )
         .then((bg.Location location) {
       print('[getCurrentPosition] - $location');

@@ -436,10 +436,12 @@ class _BackgroundGeoState extends State<BackgroundGeo> {
   }
 
   String str = "";
+  bg.Location latest;
   void _onLocation(bg.Location location) async {
     print('[location] - $location');
 
     String odometerKM = (location.odometer / 1000.0).toStringAsFixed(1);
+    latest = location;
 
     setState(() {
       str = location.timestamp;
@@ -467,17 +469,27 @@ class _BackgroundGeoState extends State<BackgroundGeo> {
   Widget build(BuildContext context) {
     // TODO: implement build
     return Scaffold(
-      body: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        mainAxisSize: MainAxisSize.max,
-        children: <Widget>[
-          Text(str),
-          RaisedButton(
-            child: Text("get the data"),
-            onPressed: _onClickGetCurrentPosition,
-          ),
-        ],
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.max,
+          children: <Widget>[
+            (latest != null) ? displaycard("Latitude", latest.coords.latitude.toString()) : Container(),
+            (latest != null) ? displaycard("Longitude", latest.coords.latitude.toString()) : Container(),
+            (latest != null) ? displaycard("Accuracy", latest.coords.accuracy.toString()) : Container(),
+            (latest != null) ? displaycard("Altitude", latest.coords.altitude.toString()) : Container(),
+            // (latest != null) ? displaycard("Heading", latest.coords.heading.toString()) : Container(),
+            (latest != null) ? displaycard("Speed", latest.coords.speed.toString()) : Container(),
+            Text(str),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: RaisedButton(
+                child: Text("get the data"),
+                onPressed: _onClickGetCurrentPosition,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -494,5 +506,35 @@ class _BackgroundGeoState extends State<BackgroundGeo> {
     }).catchError((error) {
       print('[getCurrentPosition] ERROR: $error');
     });
+  }
+}
+
+class displaycard extends StatelessWidget {
+  displaycard(this.variable, this.value);
+
+  String variable = "";
+  String value = "";
+
+  @override
+  Widget build(BuildContext context) {
+    // TODO: implement build
+    return Padding(
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: <Widget>[
+              Text(
+                variable,
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              Text(value),
+            ],
+          ),
+        ),
+      ),
+      padding: const EdgeInsets.all(16.0),
+    );
   }
 }

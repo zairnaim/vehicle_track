@@ -11,7 +11,10 @@ import 'package:flutter_background_geolocation/flutter_background_geolocation.da
 
 final CREATE_POST_URL = 'http://api.allegoryinsurance.com/data';
 
-void main() => runApp(MyApp());
+void main() {
+  runApp(MyApp());
+  bg.BackgroundGeolocation.registerHeadlessTask(headlessTask);
+}
 
 class MyApp extends StatelessWidget {
   @override
@@ -389,6 +392,62 @@ Future<PositionPost> createPositionPost(String url, {String body}) async {
 
 ///// Flutter Background Geolocation Plugin Stuff
 
+void headlessTask(bg.HeadlessEvent headlessEvent) async {
+  print('[BackgroundGeolocation HeadlessTask]: $headlessEvent');
+  // Implement a 'case' for only those events you're interested in.
+  switch(headlessEvent.name) {
+    case bg.Event.TERMINATE:
+      bg.State state = headlessEvent.event;
+      print('- State: $state');
+      break;
+    case bg.Event.HEARTBEAT:
+      bg.HeartbeatEvent event = headlessEvent.event;
+      print('- HeartbeatEvent: $event');
+      break;
+    case bg.Event.LOCATION:
+      bg.Location location = headlessEvent.event;
+      print('- Location: $location');
+      break;
+    case bg.Event.MOTIONCHANGE:
+      bg.Location location = headlessEvent.event;
+      print('- Location: $location');
+      break;
+    case bg.Event.GEOFENCE:
+      bg.GeofenceEvent geofenceEvent = headlessEvent.event;
+      print('- GeofenceEvent: $geofenceEvent');
+      break;
+    case bg.Event.GEOFENCESCHANGE:
+      bg.GeofencesChangeEvent event = headlessEvent.event;
+      print('- GeofencesChangeEvent: $event');
+      break;
+    case bg.Event.SCHEDULE:
+      bg.State state = headlessEvent.event;
+      print('- State: $state');
+      break;
+    case bg.Event.ACTIVITYCHANGE:
+      bg.ActivityChangeEvent event = headlessEvent.event;
+      print('ActivityChangeEvent: $event');
+      break;
+    case bg.Event.HTTP:
+      bg.HttpEvent response = headlessEvent.event;
+      print('HttpEvent: $response');
+      break;
+    case bg.Event.POWERSAVECHANGE:
+      bool enabled = headlessEvent.event;
+      print('ProviderChangeEvent: $enabled');
+      break;
+    case bg.Event.CONNECTIVITYCHANGE:
+      bg.ConnectivityChangeEvent event = headlessEvent.event;
+      print('ConnectivityChangeEvent: $event');
+      break;
+    case bg.Event.ENABLEDCHANGE:
+      bool enabled = headlessEvent.event;
+      print('EnabledChangeEvent: $enabled');
+      break;
+  }
+}
+
+
 class BackgroundGeo extends StatefulWidget {
   @override
   _BackgroundGeoState createState() => _BackgroundGeoState();
@@ -420,6 +479,7 @@ class _BackgroundGeoState extends State<BackgroundGeo> {
     bg.BackgroundGeolocation.ready(bg.Config(
             desiredAccuracy: bg.Config.DESIRED_ACCURACY_HIGH,
             distanceFilter: 1.0,
+            enableHeadless: true,
             stopOnTerminate: false,
             startOnBoot: true,
             debug: true,
@@ -474,12 +534,22 @@ class _BackgroundGeoState extends State<BackgroundGeo> {
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.max,
           children: <Widget>[
-            (latest != null) ? displaycard("Latitude", latest.coords.latitude.toString()) : Container(),
-            (latest != null) ? displaycard("Longitude", latest.coords.latitude.toString()) : Container(),
-            (latest != null) ? displaycard("Accuracy", latest.coords.accuracy.toString()) : Container(),
-            (latest != null) ? displaycard("Altitude", latest.coords.altitude.toString()) : Container(),
+            (latest != null)
+                ? displaycard("Latitude", latest.coords.latitude.toString())
+                : Container(),
+            (latest != null)
+                ? displaycard("Longitude", latest.coords.latitude.toString())
+                : Container(),
+            (latest != null)
+                ? displaycard("Accuracy", latest.coords.accuracy.toString())
+                : Container(),
+            (latest != null)
+                ? displaycard("Altitude", latest.coords.altitude.toString())
+                : Container(),
             // (latest != null) ? displaycard("Heading", latest.coords.heading.toString()) : Container(),
-            (latest != null) ? displaycard("Speed", latest.coords.speed.toString()) : Container(),
+            (latest != null)
+                ? displaycard("Speed", latest.coords.speed.toString())
+                : Container(),
             Text(str),
             Padding(
               padding: const EdgeInsets.all(8.0),

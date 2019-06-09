@@ -9,7 +9,12 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_background_geolocation/flutter_background_geolocation.dart'
     as bg;
 
-void main() => runApp(MyApp());
+final CREATE_POST_URL = 'http://api.allegoryinsurance.com/data';
+
+void main() {
+  runApp(MyApp());
+  bg.BackgroundGeolocation.registerHeadlessTask(headlessTask);
+}
 
 class MyApp extends StatelessWidget {
   @override
@@ -356,14 +361,14 @@ class PositionPost {
     map["user_id"] = userid;
 
     var databody = {};
-    databody["user_id"] = userid;
-    databody["longitude"] = longitude;
-    databody["latitude"] = latitude;
     databody["timestamp"] = timestamp;
+    databody["latitude"] = latitude;
+    databody["longitude"] = longitude;
     databody["accuracy"] = accuracy;
     databody["altitude"] = altitude;
+    databody["heading"] = 0;
     databody["speed"] = speed;
-    databody["speedacuracy"] = speedaccuracy;
+    databody["speed_accuracy"] = 0;
 
     map["position"] = [databody];
     return map;
@@ -387,6 +392,62 @@ Future<PositionPost> createPositionPost(String url, {String body}) async {
 
 ///// Flutter Background Geolocation Plugin Stuff
 
+void headlessTask(bg.HeadlessEvent headlessEvent) async {
+  print('[BackgroundGeolocation HeadlessTask]: $headlessEvent');
+  // Implement a 'case' for only those events you're interested in.
+  switch(headlessEvent.name) {
+    case bg.Event.TERMINATE:
+      bg.State state = headlessEvent.event;
+      print('- State: $state');
+      break;
+    case bg.Event.HEARTBEAT:
+      bg.HeartbeatEvent event = headlessEvent.event;
+      print('- HeartbeatEvent: $event');
+      break;
+    case bg.Event.LOCATION:
+      bg.Location location = headlessEvent.event;
+      print('- Location: $location');
+      break;
+    case bg.Event.MOTIONCHANGE:
+      bg.Location location = headlessEvent.event;
+      print('- Location: $location');
+      break;
+    case bg.Event.GEOFENCE:
+      bg.GeofenceEvent geofenceEvent = headlessEvent.event;
+      print('- GeofenceEvent: $geofenceEvent');
+      break;
+    case bg.Event.GEOFENCESCHANGE:
+      bg.GeofencesChangeEvent event = headlessEvent.event;
+      print('- GeofencesChangeEvent: $event');
+      break;
+    case bg.Event.SCHEDULE:
+      bg.State state = headlessEvent.event;
+      print('- State: $state');
+      break;
+    case bg.Event.ACTIVITYCHANGE:
+      bg.ActivityChangeEvent event = headlessEvent.event;
+      print('ActivityChangeEvent: $event');
+      break;
+    case bg.Event.HTTP:
+      bg.HttpEvent response = headlessEvent.event;
+      print('HttpEvent: $response');
+      break;
+    case bg.Event.POWERSAVECHANGE:
+      bool enabled = headlessEvent.event;
+      print('ProviderChangeEvent: $enabled');
+      break;
+    case bg.Event.CONNECTIVITYCHANGE:
+      bg.ConnectivityChangeEvent event = headlessEvent.event;
+      print('ConnectivityChangeEvent: $event');
+      break;
+    case bg.Event.ENABLEDCHANGE:
+      bool enabled = headlessEvent.event;
+      print('EnabledChangeEvent: $enabled');
+      break;
+  }
+}
+
+
 class BackgroundGeo extends StatefulWidget {
   @override
   _BackgroundGeoState createState() => _BackgroundGeoState();
@@ -395,20 +456,17 @@ class BackgroundGeo extends StatefulWidget {
 class _BackgroundGeoState extends State<BackgroundGeo> {
   @override
   void initState() {
+    //https://gist.github.com/christocracy/a0464846de8a9c27c7e9de5616082878
     super.initState();
     ////
     // 1.  Listen to events (See docs for all 12 available events).
     //
 
     // Fired whenever a location is recorded
-    bg.BackgroundGeolocation.onLocation((bg.Location location) {
-      print('[location] - $location');
-    });
+    bg.BackgroundGeolocation.onLocation(_onLocation);
 
     // Fired whenever the plugin changes motion-state (stationary->moving and vice-versa)
-    bg.BackgroundGeolocation.onMotionChange((bg.Location location) {
-      print('[motionchange] - $location');
-    });
+    bg.BackgroundGeolocation.onMotionChange(_onLocation);
 
     // Fired whenever the state of location-services changes.  Always fired at boot
     bg.BackgroundGeolocation.onProviderChange((bg.ProviderChangeEvent event) {
@@ -421,6 +479,7 @@ class _BackgroundGeoState extends State<BackgroundGeo> {
     bg.BackgroundGeolocation.ready(bg.Config(
             desiredAccuracy: bg.Config.DESIRED_ACCURACY_HIGH,
             distanceFilter: 1.0,
+            enableHeadless: true,
             stopOnTerminate: false,
             startOnBoot: true,
             debug: true,
@@ -436,21 +495,71 @@ class _BackgroundGeoState extends State<BackgroundGeo> {
     });
   }
 
+  String str = "";
+  bg.Location latest;
+  void _onLocation(bg.Location location) async {
+    print('[location] - $location');
+
+    String odometerKM = (location.odometer / 1000.0).toStringAsFixed(1);
+    latest = location;
+
+    setState(() {
+      str = location.timestamp;
+    });
+
+    //   _locationValues = <double>[position.latitude, position.longitude];
+    //print("heelloo" + _locationValues[0].toString());
+    PositionPost pp = PositionPost(
+      userid: 123,
+      accuracy: location.coords.accuracy,
+      altitude: location.coords.altitude,
+      timestamp: location.timestamp.toString(),
+      longitude: location.coords.longitude,
+      latitude: location.coords.latitude,
+      heading: location.coords.heading,
+      speed: location.coords.speed,
+      speedaccuracy: 0,
+    );
+
+    String jsonBody = json.encode(pp.toMap());
+    PositionPost p = await createPositionPost(CREATE_POST_URL, body: jsonBody);
+  }
+
   @override
   Widget build(BuildContext context) {
     // TODO: implement build
     return Scaffold(
-      body: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        mainAxisSize: MainAxisSize.max,
-        children: <Widget>[
-          Text("hi"),
-          RaisedButton(
-            child: Text("get the data"),
-            onPressed: _onClickGetCurrentPosition,
-          ),
-        ],
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.max,
+          children: <Widget>[
+            (latest != null)
+                ? displaycard("Latitude", latest.coords.latitude.toString())
+                : Container(),
+            (latest != null)
+                ? displaycard("Longitude", latest.coords.latitude.toString())
+                : Container(),
+            (latest != null)
+                ? displaycard("Accuracy", latest.coords.accuracy.toString())
+                : Container(),
+            (latest != null)
+                ? displaycard("Altitude", latest.coords.altitude.toString())
+                : Container(),
+            // (latest != null) ? displaycard("Heading", latest.coords.heading.toString()) : Container(),
+            (latest != null)
+                ? displaycard("Speed", latest.coords.speed.toString())
+                : Container(),
+            Text(str),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: RaisedButton(
+                child: Text("get the data"),
+                onPressed: _onClickGetCurrentPosition,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -460,12 +569,42 @@ class _BackgroundGeoState extends State<BackgroundGeo> {
             persist: false, // <-- do not persist this location
             desiredAccuracy: 0, // <-- desire best possible accuracy
             timeout: 30000, // <-- wait 30s before giving up.
-            samples: 3 // <-- sample 3 location before selecting best.
+            samples: 1 // <-- sample 3 location before selecting best.
             )
         .then((bg.Location location) {
       print('[getCurrentPosition] - $location');
     }).catchError((error) {
       print('[getCurrentPosition] ERROR: $error');
     });
+  }
+}
+
+class displaycard extends StatelessWidget {
+  displaycard(this.variable, this.value);
+
+  String variable = "";
+  String value = "";
+
+  @override
+  Widget build(BuildContext context) {
+    // TODO: implement build
+    return Padding(
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: <Widget>[
+              Text(
+                variable,
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              Text(value),
+            ],
+          ),
+        ),
+      ),
+      padding: const EdgeInsets.all(16.0),
+    );
   }
 }
